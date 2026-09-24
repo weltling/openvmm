@@ -94,6 +94,12 @@ separation lets the caller use a different, potentially more
 performant I/O path for bulk data without the crate imposing any
 particular strategy.
 
+- On Linux, `disklayer_vhdx` sends resolved payload ranges through the
+  shared `disk_file` host-file interface. Reads and writes copy between
+  guest memory and a contiguous buffer, then submit positioned io_uring
+  `Read` and `Write` operations. This avoids per request guest page lock
+  setup while keeping payload file access on io_uring.
+  Metadata continues to use the owned-buffer `AsyncFile` interface.
 - The `vhdx` crate provides the low-level VHDX format implementation
   and I/O resolution API. For OpenVMM integration, the `disklayer_vhdx`
   crate supplies a `LayerIo`-compatible backend used in the layered

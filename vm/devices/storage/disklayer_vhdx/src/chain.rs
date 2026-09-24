@@ -143,7 +143,7 @@ pub async fn open_vhdx_chain(
 
         // Open the current file read-only just to read metadata.
         // The actual read-write open happens later via open_vhdx_chain_explicit.
-        let bf = crate::io::BlockingFile::open(&current_path, true)
+        let bf = crate::io::MetadataFile::open(&current_path, true)
             .with_context(|| format!("failed to open vhdx file: {}", current_path.display()))?;
         let vhdx = vhdx::VhdxFile::open(bf)
             .read_only()
@@ -287,7 +287,7 @@ mod tests {
 
         let path2 = path.clone();
         pal_async::DefaultPool::run_with(|_driver| async move {
-            let bf = crate::io::BlockingFile::open(&path2, false).unwrap();
+            let bf = crate::io::MetadataFile::open(&path2, false).unwrap();
             let mut params = vhdx::CreateParams {
                 disk_size: 1024 * 1024,
                 ..Default::default()
@@ -312,7 +312,7 @@ mod tests {
 
         let path2 = path.clone();
         pal_async::DefaultPool::run_with(|_driver| async move {
-            let bf = crate::io::BlockingFile::open(&path2, false).unwrap();
+            let bf = crate::io::MetadataFile::open(&path2, false).unwrap();
             let mut params = vhdx::CreateParams {
                 disk_size: 1024 * 1024,
                 ..Default::default()
@@ -337,7 +337,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("base.vhdx");
 
-        let bf = crate::io::BlockingFile::open(&path, false).unwrap();
+        let bf = crate::io::MetadataFile::open(&path, false).unwrap();
         let mut params = vhdx::CreateParams {
             disk_size: 1024 * 1024,
             ..Default::default()
