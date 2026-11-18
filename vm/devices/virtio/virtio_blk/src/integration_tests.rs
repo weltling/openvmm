@@ -760,6 +760,35 @@ fn ram_disk(size: u64, read_only: bool) -> Disk {
         .into_disk()
 }
 
+#[async_test]
+async fn disk_resize_updates_guest_capacity(driver: DefaultDriver) {
+    let disk = disklayer_ram::ram_disk_with_sector_size(8192, false, 4096).unwrap();
+    let mut harness = TestHarness::new(&driver, disk.clone(), false);
+    assert_eq!(harness.device.read_registers_u32(0).await, 16);
+    harness.enable().await;
+
+    // The first resize can race with the worker's initial capacity read.
+    // Wait for it before issuing the second resize to test runtime handling.
+    for (sector_count, capacity) in [("4", 32), ("6", 48)] {
+        inspect::update("disk/layers/0/backing/sector_count", sector_count, &disk)
+            .await
+            .unwrap();
+        with_timeout(
+            &driver,
+            Duration::from_secs(2),
+            "capacity did not update",
+            async {
+                let mut timer = PolledTimer::new(&driver);
+                while harness.device.read_registers_u32(0).await != capacity {
+                    timer.sleep(Duration::from_millis(1)).await;
+                }
+            },
+        )
+        .await;
+    }
+    harness.device.stop_queue(0).await;
+}
+
 struct RequeueResources {
     mem: GuestMemory,
     queue_event: Event,
